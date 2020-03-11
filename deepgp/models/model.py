@@ -11,15 +11,15 @@ from ..layers import ObservedLayer, ObservedMRDLayer, HiddenLayer, TopHiddenLaye
 
 class DeepGP(Model):
     """
-    Deep Gaussian process model. 
+    Deep Gaussian process model.
     To use repeatX, you need to:
     a) Set dimensionality of intermediate kernels to [..]+Xtrain.xhape[1]
     b) Call the constructor with repeatX=True
-    e.g.: 
+    e.g.:
           kern = [GPy.kern.RBF(Ds+Xtrain.shape[1], ARD=True), GPy.kern.RBF(Xtrain.shape[1], ARD=True)]
           m = deepgp.DeepGP(..., repeatX=True)
     """
-    
+
     def __init__(self, nDims, Y, X=None, num_inducing=10,
                  likelihood = None, inits='PCA', name='deepgp',
                  kernels=None, obs_data='cont', back_constraint=True,
@@ -27,11 +27,11 @@ class DeepGP(Model):
                  inference_method=None, **kwargs):
         super(DeepGP, self).__init__(name=name)
         self._IN_OPTIMIZATION_ = False
-        
+
         # Back-forward compatibility with old interface
         if encoder_dims is None and 'MLP_dims' in kwargs:
             encoder_dims = kwargs['MLP_dims']
-        
+
         self.mpi_comm, self.mpi_root = mpi_comm, mpi_root
         self.obs_data = obs_data
         self.nLayers = len(nDims)-1
@@ -60,7 +60,7 @@ class DeepGP(Model):
                 assert Y.shape[0]==X.shape[0], "The numbers of datapoints in X and Y have to be equal!"
         self.repeatX = repeatX
         self._log_marginal_likelihood = np.nan
-        
+
         # self.Y = Y
         # self.X = X
         Xs = self._init_Xs(Y,X)
@@ -80,7 +80,7 @@ class DeepGP(Model):
         # Parameters which exist differently per layer but specified as single componenents are here expanded to each layer
         if not isinstance(num_inducing, list or tuple): num_inducing = [num_inducing]*self.nLayers
         if not isinstance(inits, list or tuple): inits = [inits]*self.nLayers
-        
+
         # Initialize Layers
         self.layers = []
         for i in range(self.nLayers):
@@ -152,12 +152,12 @@ class DeepGP(Model):
                                                back_constraint=back_constraint,
                                                inference_method=inference_method,
                                                mpi_comm=mpi_comm, mpi_root=mpi_root,
-                                               auto_update=auto_update)) 
+                                               auto_update=auto_update))
         if self.nLayers==1:
             self.layers[0].set_as_toplayer()
-        
+
         if self.back_constraint:
-            from ..layers import EncoderLayer 
+            from ..layers import EncoderLayer
             direction = 'top_down' if self.X_observed else 'bottom_up'
             if self.X_observed:
                 self.enclayers = [EncoderLayer(self.layers[i],
@@ -172,7 +172,7 @@ class DeepGP(Model):
             self.link_parameters(*(self.enclayers+self.layers))
         else:
             self.link_parameters(*self.layers)
-        
+
         if self.X_observed and self.repeatX:
             self.ensure_repeatX_constraints()
         if self.mpi_comm is not None:
@@ -188,7 +188,7 @@ class DeepGP(Model):
         return self.layers[-1].X
 
     def _init_Xs(self, Ya, Xa):
-        
+
         if isinstance(Ya,list):
             return [None for d in self.nDims[1:]]
         else:
@@ -220,7 +220,7 @@ class DeepGP(Model):
 
                     self.repeatX_Xmean = Xmean.copy()[X_mid.shape[1]:]
                     self.repeatX_Xstd = Xstd.copy()[X_mid.shape[1]:]
-    
+
                     self.nDimsOrig = nDims[:]
                     nDims[1] = X_mid2.shape[1]
                     X_mid = X_mid2
@@ -231,7 +231,7 @@ class DeepGP(Model):
         else:
             Xs = [None for d in nDims[1:]]
         return Xs
-    
+
     def ensure_repeatX_constraints(self):
         for i in range(self.nLayers):
             if hasattr(self.layers[i],'X_dim_top'):
@@ -241,7 +241,7 @@ class DeepGP(Model):
 
     def log_likelihood(self):
         return self._log_marginal_likelihood
-        
+
     def parameters_changed(self):
         if not self.auto_update: [l.update_layer() for l in self.layers]
         self._log_marginal_likelihood = np.sum([l._log_marginal_likelihood for l in self.layers])
@@ -249,7 +249,7 @@ class DeepGP(Model):
             [l.update_gradients() for l in self.enclayers[::-1]]
             if self.mpi_comm is not None:
                 [l._gather_gradients() for l in self.enclayers]
-        
+
     def add_layer(self, dim_up, X=None,
                   X_variance=None, Z=None,
                   uncertain_inputs=True, num_inducing=10,
@@ -267,10 +267,10 @@ class DeepGP(Model):
             ls.append(layer)
         elif isinstance(self.layers[-1], ObservedLayer):
             self.layers[0].set_as_toplayer(False)
-            
+
         self.layers.append(TopHiddenLayer(self.layers[-1], dim_up,
                                           num_inducing=num_inducing,
-                                          name='layer_'+str(self.nLayers), init=init, 
+                                          name='layer_'+str(self.nLayers), init=init,
                                           kernel=kernel, noise_var=noise_var,
                                           MLP_dims=MLP_dims, mpi_comm=self.mpi_comm,
                                           mpi_root=self.mpi_root,
@@ -282,14 +282,14 @@ class DeepGP(Model):
         self.nDims.append(dim_up)
         self.input_dim = self.nDims[-1]
         self.link_parameters(*ls)
-        
+
     def gen_pred_model(self, Y=None, init_X='encoder', binObserved=False):
         from GPy.core.parameterization.variational import NormalPosterior
         from deepgp.models.pred_model import PredDeepGP
-        
+
         if Y is not None:
             Xs = [Y]
-            
+
             if init_X=='nn':
                 xy = self.collect_all_XY()
                 for i in range(self.nLayers):
@@ -301,17 +301,17 @@ class DeepGP(Model):
                 for layer in self.layers:
                     x_mean = layer.encoder.predict(x_mean)
                     Xs.append(NormalPosterior(x_mean, np.ones(x_mean.shape)*layer.X_var))
-        
+
         layers = []
         layer_lower = None
         for i in range(self.nLayers):
             layers.append(self.layers[i].gen_pred_layer(layer_lower=layer_lower,Y=Xs[i], X=Xs[i+1], binObserved=(i==0 and binObserved)))
             layer_lower = layers[-1]
-        
+
         pmodel = PredDeepGP(layers)
         if init_X=='nn': pmodel.set_train_data(xy)
         return pmodel
-    
+
     def collect_all_XY(self, root=0):
         if self.mpi_comm is None:
             XY = [self.obslayer.Y.copy()]
@@ -337,11 +337,11 @@ class DeepGP(Model):
                     XY.append(NormalPosterior(X_mean_all, X_var_all))
             if self.mpi_comm.rank==root: return XY
             else: return None
-        
+
     def predict(self, Xnew, full_cov=False, Y_metadata=None, kern=None):
         """Make a prediction from the deep Gaussian process model for a given input"""
         from GPy.core.parameterization.variational import NormalPosterior
-        
+
         if self.repeatX:
             assert self.nLayers==2
             mean,var = self.layers[-1].predict(Xnew)
@@ -392,9 +392,9 @@ class DeepGP(Model):
                     self._IN_OPTIMIZATION_ = False
                     raise Exception("Unrecognizable flag for synchronization!")
         self._IN_OPTIMIZATION_ = False
-        
+
     def predict_withSamples(self, X, nSamples=100):
-        
+
         y_mean, y_var = self.layers[-1].predict(X)
         y_samples = np.random.randn(nSamples,X.shape[0],y_mean.shape[1])*np.sqrt(y_var)+y_mean
         for l in self.layers[-2::-1]:
@@ -404,7 +404,16 @@ class DeepGP(Model):
         y_mean = y_samples.mean(0)
         y_var = y_samples.var(0)
         return y_mean, y_var
-        
+
+    def samples_prediction(self, X, nSamples=100):
+        y_mean, y_var = self.layers[-1].predict(X)
+        y_samples = np.random.randn(nSamples,X.shape[0],y_mean.shape[1])*np.sqrt(y_var)+y_mean
+        for l in self.layers[-2::-1]:
+            y_mean, y_var = l.predict(y_samples.reshape(nSamples*X.shape[0],-1))
+            y_samples = np.random.randn(*y_var.shape)*np.sqrt(y_var)+y_mean
+        y_samples = y_samples.reshape(nSamples, X.shape[0],-1)
+        return y_samples
+
     def predict_quantiles(self, X, quantiles=(2.5, 97.5), Y_metadata=None):
         """
         Get the predictive quantiles around the prediction at X
