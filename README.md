@@ -3,7 +3,7 @@ Repository for the MVA course Bayesian Machine Learning on the topic of "Deep Ga
 
 Repository based on the original repository https://github.com/SheffieldML/PyDeepGP, repository for the code of the paper "Deep Gaussian Processes" from Damianou and al. (2013)
 
-This repository includes the following notebooks for our experiments:
+This repository includes the following notebooks and classes for our experiments:
 
 - GP_Samples.ipynb : Notebook exploring the space of functions encapsulated in different Gaussian and Deep Gaussian Processes. Also includes regressions.
 - GP-LVM_Unsupervised.ipynb : Application of the Gaussian Process Latent Variable Model (GP-LVM, Titsias and al. 2010) for the Mnist Dataset.
