@@ -11,3 +11,5 @@ This repository includes the following notebooks for our experiments:
 - DeepGP_Fashion.ipynb : Application of deep GPs for unsupervised learning on the cifar fashion dataset.
 - Bayesian_Optimization.ipynb : Notebook illustrating the use of deep gaussian processes for bayesian optimization.
 - bo.py : Python module handling the bayesian optimization mechanisms.
+
+![](/examples/ResultsDGPUnsup/super_plot.pdf)
