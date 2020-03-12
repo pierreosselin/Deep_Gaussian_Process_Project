@@ -12,4 +12,4 @@ This repository includes the following notebooks for our experiments:
 - Bayesian_Optimization.ipynb : Notebook illustrating the use of deep gaussian processes for bayesian optimization.
 - bo.py : Python module handling the bayesian optimization mechanisms.
 
-![](/examples/ResultsDGPUnsup/super_plot.pdf)
+![](/examples/ResultsDGPUnsup/super_plot.png)
